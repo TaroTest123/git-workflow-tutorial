@@ -25,6 +25,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: debug OIDC claims (一時 / 確認後に削除)
+        run: |
+          T=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r .value)
+          jq -Rn --arg t "$T" \
+            '$t | split(".") | .[1] | gsub("-";"+") | gsub("_";"/") | @base64d | fromjson
+             | {sub, aud, repository, environment, repository_owner}'
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -82,3 +96,4 @@ jobs:
 
       - name: Show deployed URL
         run: echo "dev => ${{ vars.APP_URL }}"
+
